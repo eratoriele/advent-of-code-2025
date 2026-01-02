@@ -41,19 +41,24 @@ fn main() {
         given_array.push(line_vec);
     }
 
+    let mut prev_result = 1u32; // start at 1 to enter the loop
     let mut result = 0u32;
-    for i in 0..width {
-        for j in 0..height {
-            if given_array[i][j] == '@'
-                && paper_cleanable(
-                    i as u16,
-                    j as u16,
-                    &given_array,
-                    (width - 1) as u16,
-                    (height - 1) as u16,
-                )
-            {
-                result += 1;
+    while prev_result != result {
+        prev_result = result;
+        for i in 0..width {
+            for j in 0..height {
+                if given_array[i][j] == '@'
+                    && paper_cleanable(
+                        i as u16,
+                        j as u16,
+                        &given_array,
+                        (width - 1) as u16,
+                        (height - 1) as u16,
+                    )
+                {
+                    result += 1;
+                    given_array[i][j] = '.';
+                }
             }
         }
     }
