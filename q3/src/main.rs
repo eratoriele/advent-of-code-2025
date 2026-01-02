@@ -3,12 +3,12 @@ use std::fs;
 fn get_biggest_digit(list: &[u8]) -> (u8, usize) {
     let mut highest = 0u8;
     let mut highest_index = 0;
-    for i in 0..list.len() {
+    for (index, val) in list.iter().enumerate() {
         if highest == 9 {
             break;
-        } else if list[i] > highest {
-            highest = list[i];
-            highest_index = i;
+        } else if *val > highest {
+            highest = *val;
+            highest_index = index;
         }
     }
     (highest, highest_index)
