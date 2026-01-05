@@ -1,48 +1,33 @@
 use std::fs;
 
-const CONNECTION_COUNT: usize = 1000;
+// const CONNECTION_COUNT: usize = 10000;
 
 #[derive(Debug)]
 struct Point3D(u64, u64, u64);
 
 #[derive(Clone, Copy, Debug)]
 struct Connection {
-    distance: f64,
+    distance: u64,
     point_indexes: (u16, u16),
 }
-impl Connection {
-    fn default() -> Connection {
-        Connection {
-            distance: f64::MAX,
-            point_indexes: (0, 0),
-        }
-    }
-}
+// impl Connection {
+//     fn default() -> Connection {
+//         Connection {
+//             distance: u64::MAX,
+//             point_indexes: (0, 0),
+//         }
+//     }
+// }
 
 #[derive(Debug)]
 struct ConnectionStructure {
     indexes: Vec<u16>,
 }
 
-fn calculate_distance(first: &Point3D, second: &Point3D) -> f64 {
-    let distance: f64 = (first.0.abs_diff(second.0).pow(2)
+fn calculate_distance(first: &Point3D, second: &Point3D) -> u64 {
+    first.0.abs_diff(second.0).pow(2)
         + first.1.abs_diff(second.1).pow(2)
-        + first.2.abs_diff(second.2).pow(2)) as f64;
-
-    distance.sqrt()
-}
-
-fn should_replace(arr: &[Connection], distance: f64) -> (bool, u16) {
-    let mut replace = false;
-    let mut index = CONNECTION_COUNT as u16;
-    for conn in arr.iter().rev() {
-        if distance > conn.distance {
-            break;
-        }
-        replace = true;
-        index -= 1;
-    }
-    (replace, index)
+        + first.2.abs_diff(second.2).pow(2)
 }
 
 fn main() {
@@ -62,29 +47,24 @@ fn main() {
         points.push(point);
     }
 
-    let mut smallest_distances: Vec<Connection> = vec![Connection::default(); CONNECTION_COUNT];
+    let mut smallest_distances: Vec<Connection> = Vec::new();
     for (first_index, first) in points.iter().enumerate() {
         for (second_index, second) in points.iter().skip(first_index + 1).enumerate() {
             let distance = calculate_distance(first, second);
-            let (replace, index) = should_replace(&smallest_distances, distance);
-            if replace {
-                smallest_distances.insert(
-                    index as usize,
-                    Connection {
-                        distance,
-                        point_indexes: (
-                            first_index as u16,
-                            (second_index + first_index + 1) as u16,
-                        ),
-                    },
-                );
-                smallest_distances.pop();
-            }
+            // let (replace, index) = should_replace(&smallest_distances, distance);
+            // if replace {
+            smallest_distances.push(Connection {
+                distance,
+                point_indexes: (first_index as u16, (second_index + first_index + 1) as u16),
+            });
+            // smallest_distances.pop();
+            // }
         }
     }
+    smallest_distances.sort_by(|a, b| a.distance.cmp(&b.distance));
 
     let mut structures: Vec<ConnectionStructure> = Vec::new();
-    for conn in smallest_distances.iter() {
+    for conn in smallest_distances.iter().take(1000) {
         let zero_included = structures
             .iter()
             .position(|e| e.indexes.contains(&conn.point_indexes.0));
@@ -117,13 +97,70 @@ fn main() {
         }
     }
 
+    // println!("{:?}", structures[0].indexes.len());
     structures.sort_by(|a, b| b.indexes.len().cmp(&a.indexes.len()));
     println!("{:#?}", structures);
     println!(
-        "{}",
+        "part1: {}",
         structures
             .iter()
             .take(3)
             .fold(1, |acc, x| acc * x.indexes.len())
     );
+
+    //part 2:
+    let mut smallest_distances: Vec<Connection> = Vec::new();
+    for (first_index, first) in points.iter().enumerate() {
+        println!("index: {first_index}");
+        for (second_index, second) in points.iter().skip(first_index + 1).enumerate() {
+            let distance = calculate_distance(first, second);
+            smallest_distances.push(Connection {
+                distance,
+                point_indexes: (first_index as u16, (second_index + first_index + 1) as u16),
+            });
+        }
+    }
+    smallest_distances.sort_by(|a, b| a.distance.cmp(&b.distance));
+
+    let mut structures: Vec<ConnectionStructure> = Vec::new();
+    for (i, conn) in smallest_distances.iter().enumerate() {
+        let zero_included = structures
+            .iter()
+            .position(|e| e.indexes.contains(&conn.point_indexes.0));
+        let one_included = structures
+            .iter()
+            .position(|e| e.indexes.contains(&conn.point_indexes.1));
+
+        // if both indexes are already part of connections
+        if let Some(i_0) = zero_included
+            && let Some(i_1) = one_included
+        {
+            // the they alread are in the same connection
+            if i_0 == i_1 {
+                continue;
+            }
+            let second_struct = structures[i_1].indexes.clone();
+            structures[i_0].indexes.extend(second_struct);
+            structures.remove(i_1);
+        } else if let Some(i) = zero_included {
+            // if only first one is in a connection
+            structures[i].indexes.push(conn.point_indexes.1);
+        } else if let Some(i) = one_included {
+            // if only second one is in a connection
+            structures[i].indexes.push(conn.point_indexes.0);
+        } else {
+            // if neither is in a connection
+            structures.push(ConnectionStructure {
+                indexes: vec![conn.point_indexes.0, conn.point_indexes.1],
+            });
+        }
+
+        if structures[0].indexes.len() == points.len() {
+            let x_0 = points.get(conn.point_indexes.0 as usize).unwrap().0;
+            let x_1 = points.get(conn.point_indexes.1 as usize).unwrap().0;
+            println!("at {i} => {:?} * {:?} = {}", x_0, x_1, x_0 * x_1);
+            break;
+        }
+    }
+    println!("{:?}", structures[0].indexes.len());
 }
