@@ -1,4 +1,7 @@
-use std::fs;
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+};
 
 fn main() {
     // let file_name = "input/example";
@@ -26,38 +29,63 @@ fn main() {
         }
     }
 
-    let max_steps = (map.len() * map[0].len() - blocks.len() - 1) as u32;
-    let mut steps_taken = 0u32;
+    let mut guard = guard_spawn;
+    loop {
+        let next_guard_point = (
+            guard.0 + guard_movement[guard_direction].0,
+            guard.1 + guard_movement[guard_direction].1,
+        );
+        println!("{next_guard_point:?}");
+        if !(0..(map[0].len() as i16)).contains(&next_guard_point.0)
+            || !(0..(map.len() as i16)).contains(&next_guard_point.1)
+        {
+            break;
+        } else if blocks.contains(&next_guard_point) {
+            guard_direction = (guard_direction + 1) % guard_movement.len();
+        } else {
+            guard = next_guard_point;
+            map[guard.0 as usize][guard.1 as usize] = true;
+        }
+    }
 
+    let mut visited_nodes: Vec<(i16, i16)> = Vec::new();
+    for (x_i, row) in map.iter().enumerate() {
+        for (y_i, &b) in row.iter().enumerate() {
+            if b {
+                visited_nodes.push((x_i as i16, y_i as i16));
+            }
+        }
+    }
+    println!("{}", visited_nodes.len());
     let mut results = 0u32;
 
-    for i in 0..map.len() {
-        for j in 0..map[0].len() {
-            let mut guard = guard_spawn;
-            guard_direction = 0;
-            steps_taken = 0;
-            let mut new_blocks = blocks.to_vec();
-            new_blocks.push((i as i16, j as i16));
-            loop {
-                let next_guard_point = (
-                    guard.0 + guard_movement[guard_direction].0,
-                    guard.1 + guard_movement[guard_direction].1,
-                );
-                if !(0..(map[0].len() as i16)).contains(&next_guard_point.0)
-                    || !(0..(map.len() as i16)).contains(&next_guard_point.1)
-                {
+    for (index, &(i, j)) in visited_nodes.iter().enumerate() {
+        println!("{index}");
+        let mut guard = guard_spawn;
+        guard_direction = 0;
+        let mut new_blocks = blocks.to_vec();
+        new_blocks.push((i, j));
+
+        // block location, approached from
+        let mut cache: HashSet<((i16, i16), (i16, i16))> = HashSet::new();
+        loop {
+            let next_guard_point = (
+                guard.0 + guard_movement[guard_direction].0,
+                guard.1 + guard_movement[guard_direction].1,
+            );
+            if !(0..(map[0].len() as i16)).contains(&next_guard_point.0)
+                || !(0..(map.len() as i16)).contains(&next_guard_point.1)
+            {
+                break;
+            } else if new_blocks.contains(&next_guard_point) {
+                if !cache.insert((guard, next_guard_point)) {
+                    results += 1;
                     break;
-                } else if new_blocks.contains(&next_guard_point) {
-                    guard_direction = (guard_direction + 1) % guard_movement.len();
-                } else {
-                    guard = next_guard_point;
-                    // map[guard.0 as usize][guard.1 as usize] = true;
-                    steps_taken += 1;
-                    if steps_taken >= max_steps {
-                        results += 1;
-                        break;
-                    }
                 }
+                guard_direction = (guard_direction + 1) % guard_movement.len();
+            } else {
+                guard = next_guard_point;
+                // map[guard.0 as usize][guard.1 as usize] = true;
             }
         }
     }
